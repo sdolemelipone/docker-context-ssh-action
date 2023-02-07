@@ -42,23 +42,34 @@ runs:
         chmod 700 ~/.ssh
        
     - shell: bash
-      name: Start the ssh agent
-      run: |
-        ssh-agent -a "${{ inputs.ssh-socket }}"
-        echo "SSH_AUTH_SOCK=${{ inputs.ssh-socket }}" >> $GITHUB.ENV
-        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
-
-    - shell: bash
       name: Add the private key
       run: |
         echo "${{ inputs.ssh-private-key }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa 
 
+#    - shell: bash
+#      name: Start the ssh agent
+#      if: ${{ inputs.ssh-passphrase == null }}
+#      run: |
+#        ssh-agent -a "${{ inputs.ssh-socket }}"
+#        echo "SSH_AUTH_SOCK=${{ inputs.ssh-socket }}" >> $GITHUB.ENV
+#        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+
     - shell: bash
-      name: Add the ssh key with passphrase
+      name: Start the ssh agent and add the key and passphrase
       if: ${{ inputs.ssh-passphrase }}
       run: |
-          { sleep 1; echo ${{ inputs.ssh-passphrase }}; } | script -q /dev/null -c 'ssh-add'
+        ssh-agent -a "${{ inputs.ssh-socket }}"
+        echo "SSH_AUTH_SOCK=${{ inputs.ssh-socket }}" >> $GITHUB.ENV
+        echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+        { sleep 1; echo ${{ inputs.ssh-passphrase }}; } | script -q /dev/null -c 'ssh-add'
+
+#    - shell: bash
+#      name: Add the ssh key with passphrase
+#      if: ${{ inputs.ssh-passphrase }}
+#      run: |
+#        { sleep 1; echo ${{ inputs.ssh-passphrase }}; } | script -q /dev/null -c 'ssh-add'
+
     - shell: bash
       name: Add the host to the known_hosts file
       run: ssh-keyscan -p "${{ inputs.ssh-port }}" "${{ inputs.ssh-host }}" > ~/.ssh/known_hosts
