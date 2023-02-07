@@ -12,6 +12,9 @@ inputs:
   ssh-private-key:
     description: 'content of ssh private key. ex raw content of ~/.ssh/id_rsa'
     required: true
+  ssh-passphrase:
+    description: 'passphrase for private key, optional'
+    required: false
   ssh-port: 
     description: 'ssh port, default 22'
     required: false
@@ -42,7 +45,8 @@ runs:
       name: Start the ssh agent
       run: |
         ssh-agent -a "${{ inputs.ssh-socket }}"
-        export SSH_AUTH_SOCK="${{ inputs.ssh-socket }}"
+        echo "SSH_AUTH_SOCK=${{ inputs.ssh-socket }}" >> $GITHUB.ENV
+        echo "SSH_AGENT_PID=SSH_AGENT_PID" >> $GITHUB_ENV
 
     - shell: bash
       name: Add the private key 
@@ -50,6 +54,11 @@ runs:
         echo "${{ inputs.ssh-private-key }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa 
 
+    - shell: bash
+      name: Add the ssh key with passphrase
+      if: ${{ inputs.ssh-passphrase }}
+      run: |
+          { sleep 1; echo ${{ inputs.ssh-passphrase }}; } | script -q /dev/null -c 'ssh-add'
     - shell: bash
       name: Add the host to the known_hosts file
       run: ssh-keyscan -p "${{ inputs.ssh-port }}" "${{ inputs.ssh-host }}" > ~/.ssh/known_hosts
